@@ -20,7 +20,8 @@ import {
   Eye,
   Plus,
   UserCircle,
-  X
+  X,
+  MessageSquare
 } from "lucide-react"
 import {
   getCrimeAlerts,
@@ -181,7 +182,7 @@ export default function SafetyPage() {
                 <p className="font-medium text-sm truncate">{personalContact.name}</p>
                 <p className="text-lg font-bold">{personalContact.phone}</p>
               </div>
-              <Phone className="w-4 h-4 text-primary animate-pulse" />
+              <MessageSquare className="w-4 h-4 text-primary animate-pulse" />
             </div>
           </GlassCard>
         )}

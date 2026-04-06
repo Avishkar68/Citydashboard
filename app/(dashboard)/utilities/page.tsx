@@ -56,6 +56,10 @@ export default function UtilitiesPage() {
       [category]: value
     }))
   }
+  // Average conversion factors (approximate)
+const KG_CO2_PER_KWH = 0.385; // Electricity
+const KG_CO2_PER_LITER = 0.0003; // Water (treatment/transport)
+const KG_CO2_PER_KG_WASTE = 0.5; // Waste landfill average
   const todayTotal = Object.values(todayWaterInput).reduce((a, b) => a + b, 0)
   const scheduleIcons = {
     electricity: Zap,
@@ -388,7 +392,80 @@ const waterTrend =
           </div>
         </GlassCard>
       </div>
+{/* Carbon Footprint Section */}
+<GlassCard className={cn(
+  "border-t-4", 
+  emergencyMode ? "border-t-emergency" : "border-t-chart-3"
+)}>
+  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+    <div>
+      <h3 className="font-semibold text-lg flex items-center gap-2">
+        <Recycle className="w-5 h-5 text-chart-3" />
+        Environmental Impact
+      </h3>
+      <p className="text-sm text-muted-foreground">Live carbon footprint based on your current utility usage</p>
+    </div>
+    <button 
+      onClick={() => alert("Generating detailed sustainability report...")}
+      className="px-4 py-2 bg-chart-3 hover:bg-chart-3/80 text-white rounded-lg text-sm font-medium transition-all flex items-center gap-2 w-fit"
+    >
+      <Waves className="w-4 h-4" />
+      Download Eco-Report
+    </button>
+  </div>
 
+  <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+    {/* Large Display */}
+    <div className="flex flex-col justify-center items-center p-6 bg-chart-3/5 rounded-2xl border border-chart-3/10">
+      <span className="text-sm font-medium text-chart-3 uppercase tracking-wider">Total Monthly Est.</span>
+      <div className="flex items-baseline gap-1 mt-2">
+        <h2 className="text-5xl font-bold">
+          {((892 * KG_CO2_PER_KWH) + (predictedWater * KG_CO2_PER_LITER) + (48 * KG_CO2_PER_KG_WASTE)).toFixed(1)}
+        </h2>
+        <span className="text-xl font-semibold text-muted-foreground">kg</span>
+      </div>
+      <p className="text-xs text-muted-foreground mt-2 font-mono">CO2 EQUIVALENT</p>
+    </div>
+
+    {/* Breakdown Progress */}
+    <div className="lg:col-span-2 space-y-6">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Electricity Impact</span>
+            <span className="font-medium">{(892 * KG_CO2_PER_KWH).toFixed(1)} kg</span>
+          </div>
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+            <div className="h-full bg-chart-1" style={{ width: '75%' }} />
+          </div>
+        </div>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-muted-foreground">Water Impact</span>
+            <span className="font-medium">{(predictedWater * KG_CO2_PER_LITER).toFixed(1)} kg</span>
+          </div>
+          <div className="h-2 bg-secondary rounded-full overflow-hidden">
+            <div className="h-full bg-chart-2" style={{ width: '15%' }} />
+          </div>
+        </div>
+      </div>
+
+      {/* Comparison Insight */}
+      <div className="p-4 rounded-xl bg-primary/5 border border-primary/10 flex gap-4 items-start">
+        <div className="p-2 bg-primary/10 rounded-full text-primary">
+          <TrendingDown className="w-5 h-5" />
+        </div>
+        <div>
+          <h4 className="text-sm font-semibold">Eco-Champion Status</h4>
+          <p className="text-sm text-muted-foreground">
+            Your footprint is <span className="text-success font-bold">14% lower</span> than the neighborhood average. 
+            Planting 2 trees this month would completely offset your water usage!
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</GlassCard>
       {/* Usage Predictions */}
       <GlassCard className={cn(emergencyMode && "border-emergency/30")}>
         <h3 className="font-semibold mb-4 flex items-center gap-2">
