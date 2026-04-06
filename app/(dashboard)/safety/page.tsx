@@ -3,6 +3,7 @@
 import * as React from "react"
 import { GlassCard } from "@/components/ui/glass-card"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
 import { cn } from "@/lib/utils"
 import { useTheme } from "@/components/providers/theme-provider"
 import {
@@ -17,6 +18,9 @@ import {
   Bell,
   Navigation,
   Eye,
+  Plus,
+  UserCircle,
+  X
 } from "lucide-react"
 import {
   getCrimeAlerts,
@@ -30,12 +34,21 @@ export default function SafetyPage() {
   const [crimeAlerts, setCrimeAlerts] = React.useState<CrimeAlert[]>([])
   const [services, setServices] = React.useState<NearbyService[]>([])
   const [liveAlerts, setLiveAlerts] = React.useState<string[]>([])
+  
+  // --- NEW STATES FOR PERSONAL CONTACT ---
+  const [personalContact, setPersonalContact] = React.useState<{name: string, phone: string} | null>(null)
+  const [isAddingContact, setIsAddingContact] = React.useState(false)
+  const [newContact, setNewContact] = React.useState({ name: "", phone: "" })
 
   React.useEffect(() => {
     setCrimeAlerts(getCrimeAlerts())
     setServices(getNearbyServices().filter(s => 
       ['hospital', 'police', 'fire'].includes(s.type)
     ))
+
+    // Load personal contact from local storage
+    const saved = localStorage.getItem("emergency-contact")
+    if (saved) setPersonalContact(JSON.parse(saved))
 
     // Simulate live alert feed
     const alertMessages = [
@@ -55,6 +68,41 @@ export default function SafetyPage() {
 
     return () => clearInterval(interval)
   }, [])
+
+  // --- NEW HANDLERS ---
+  const saveContact = (e: React.FormEvent) => {
+    e.preventDefault()
+    if (newContact.name && newContact.phone) {
+      localStorage.setItem("emergency-contact", JSON.stringify(newContact))
+      setPersonalContact(newContact)
+      setIsAddingContact(false)
+      setNewContact({ name: "", phone: "" })
+    }
+  }
+
+ const handleCall = (number: string) => {
+  const lat = "19.0425";
+  const lon = "72.8193";
+  
+  // 1. Clean the number (remove spaces, +, etc.)
+  const cleanNumber = number.replace(/\D/g, ''); 
+  
+  // 2. Draft the Emergency Message
+  const message = `🚨 EMERGENCY SOS 🚨\n\nI need help immediately. My current location in Bandra is:\nhttps://www.google.com/maps?q=${lat},${lon}`;
+  
+  // 3. URL Encode the text so WhatsApp understands it
+  const encodedText = encodeURIComponent(message);
+
+  // 4. Open WhatsApp Web directly to that chat with the text pre-filled
+  // This will open in a new tab. Once it loads, just hit 'Enter' to send.
+  window.open(`https://web.whatsapp.com/send?phone=${cleanNumber}&text=${encodedText}`, "_blank");
+};
+
+  const handleNavigate = (destName: string) => {
+    const origin = "19.0425,72.8193"
+    const url = `https://www.google.com/maps/dir/?api=1&origin=${origin}&destination=${encodeURIComponent(destName)}&travelmode=driving`
+    window.open(url, "_blank")
+  }
 
   const emergencyContacts = [
     { name: "Emergency (911)", number: "911", icon: Siren, color: "text-destructive bg-destructive/20" },
@@ -97,21 +145,47 @@ export default function SafetyPage() {
             Emergency contacts, crime alerts, and nearby safety services
           </p>
         </div>
-        <Button
-          variant={emergencyMode ? "destructive" : "outline"}
-          onClick={() => setEmergencyMode(!emergencyMode)}
-          className={cn(
-            "gap-2",
-            emergencyMode && "animate-pulse"
-          )}
-        >
-          <AlertTriangle className="w-4 h-4" />
-          {emergencyMode ? "Exit Emergency Mode" : "Emergency Mode"}
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setIsAddingContact(true)} className="gap-2">
+            <Plus className="w-4 h-4" /> Add SOS Contact
+          </Button>
+          <Button
+            variant={emergencyMode ? "destructive" : "outline"}
+            onClick={() => setEmergencyMode(!emergencyMode)}
+            className={cn(
+              "gap-2",
+              emergencyMode && "animate-pulse"
+            )}
+          >
+            <AlertTriangle className="w-4 h-4" />
+            {emergencyMode ? "Exit Emergency Mode" : "Emergency Mode"}
+          </Button>
+        </div>
       </div>
 
       {/* Emergency Contacts */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Render Personal Contact if exists */}
+        {personalContact && (
+          <GlassCard
+            hover
+            className={cn("cursor-pointer border-primary/50 bg-primary/5", emergencyMode && "border-emergency/30")}
+            onClick={() => handleCall(personalContact.phone)}
+          >
+            <div className="flex items-center gap-3">
+              <div className="p-3 rounded-lg bg-primary/20 text-primary">
+                <UserCircle className="w-5 h-5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-[10px] uppercase text-primary tracking-wider">Personal SOS</p>
+                <p className="font-medium text-sm truncate">{personalContact.name}</p>
+                <p className="text-lg font-bold">{personalContact.phone}</p>
+              </div>
+              <Phone className="w-4 h-4 text-primary animate-pulse" />
+            </div>
+          </GlassCard>
+        )}
+
         {emergencyContacts.map((contact) => {
           const Icon = contact.icon
           return (
@@ -122,6 +196,7 @@ export default function SafetyPage() {
                 "cursor-pointer group",
                 emergencyMode && "border-emergency/30"
               )}
+              onClick={() => handleCall(contact.number)}
             >
               <div className="flex items-center gap-3">
                 <div className={cn("p-3 rounded-lg", contact.color)}>
@@ -254,7 +329,11 @@ export default function SafetyPage() {
                     {service.distance} km away
                   </p>
                 </div>
-                <Button size="sm" className="gap-1 shrink-0">
+                <Button 
+                  size="sm" 
+                  className="gap-1 shrink-0"
+                  onClick={() => handleNavigate(service.name)}
+                >
                   <Navigation className="w-4 h-4" />
                   Go
                 </Button>
@@ -300,6 +379,55 @@ export default function SafetyPage() {
           ))}
         </div>
       </GlassCard>
+
+      {/* MODAL FOR ADDING CONTACT */}
+      {isAddingContact && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-sm">
+          <GlassCard className="w-full max-w-md p-6 relative animate-in zoom-in-95 duration-200">
+            <button 
+              onClick={() => setIsAddingContact(false)}
+              className="absolute right-4 top-4 p-1 rounded-full hover:bg-secondary/80 transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+              <UserCircle className="w-5 h-5 text-primary" />
+              Emergency Contact
+            </h2>
+            
+            <form onSubmit={saveContact} className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Contact Name</label>
+                <Input 
+                  value={newContact.name} 
+                  onChange={(e) => setNewContact({...newContact, name: e.target.value})} 
+                  placeholder="e.g. Mom, Brother" 
+                  required 
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Phone Number</label>
+                <Input 
+                  type="tel" 
+                  value={newContact.phone} 
+                  onChange={(e) => setNewContact({...newContact, phone: e.target.value})} 
+                  placeholder="+91 XXXXX XXXXX" 
+                  required 
+                />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <Button type="button" variant="ghost" className="flex-1" onClick={() => setIsAddingContact(false)}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1">
+                  Save Contact
+                </Button>
+              </div>
+            </form>
+          </GlassCard>
+        </div>
+      )}
     </div>
   )
 }
