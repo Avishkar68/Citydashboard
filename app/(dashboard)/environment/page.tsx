@@ -1,40 +1,49 @@
 "use client"
 
-import * as React from "react"
+import { useTheme } from "@/components/providers/theme-provider"
 import { GlassCard } from "@/components/ui/glass-card"
 import { cn } from "@/lib/utils"
-import { useTheme } from "@/components/providers/theme-provider"
 import {
-  Leaf,
-  Wind,
-  Droplets,
-  Sun,
-  Thermometer,
   Cloud,
   CloudRain,
+  Droplets,
   Eye,
   Heart,
-  AlertTriangle,
+  Leaf,
   Loader2,
+  MapPin,
+  Sun,
+  Thermometer,
+  Wind
 } from "lucide-react"
+import * as React from "react"
 import {
-  LineChart,
-  Line,
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
   XAxis,
   YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  AreaChart,
-  Area,
 } from "recharts"
 
-// Configuration - Replace these with your actual values or env variables
+// Configuration
 const API_KEY = "4e23cb9813238f7af6d02bfa74182010"
 const LAT = "19.0544" 
 const LON = "72.8406"
 
-// Generate hourly AQI data (Keeping as mock as standard free APIs usually don't provide 24h history in one call)
+// Mumbai Neighborhoods for Heatmap Grid
+const MUMBAI_AREAS = [
+  ["Colaba", "Fort", "Byculla", "Malabar Hill", "Worli", "Prabhadevi", "Dadar", "Matunga"],
+  ["Mahim", "Dharavi", "Sion", "Wadala", "Kurla", "Ghatkopar", "Vikhroli", "Powai"],
+  ["Bandra W", "Bandra E", "Khar", "Santacruz", "Juhu", "Vile Parle", "Andheri W", "Andheri E"],
+  ["Jogeshwari", "Goregaon", "Malad", "Kandivali", "Borivali", "Dahisar", "Mulund", "Bhandup"],
+  ["Chembur", "Govandi", "Mankhurd", "Trombay", "Vashi", "Nerul", "Belapur", "Kharghar"],
+  ["Thane", "Kalwa", "Mumbra", "Diva", "Dombivli", "Kalyan", "Ulhasnagar", "Ambernath"],
+  ["Mira Road", "Bhayandar", "Vasai", "Nallasopara", "Virar", "Airoli", "Ghansoli", "Koparkhairane"],
+  ["Panvel", "Kamothe", "Kalamboli", "Taloja", "Uran", "Turbhe", "Sanpada", "Juinagar"]
+]
+
 const hourlyAQI = Array.from({ length: 24 }, (_, i) => ({
   hour: `${i.toString().padStart(2, '0')}:00`,
   aqi: Math.floor(50 + Math.sin(i / 4) * 30 + Math.random() * 20),
@@ -44,13 +53,11 @@ const hourlyAQI = Array.from({ length: 24 }, (_, i) => ({
 export default function EnvironmentPage() {
   const { emergencyMode } = useTheme()
   
-  // State for Real Data
   const [airQuality, setAirQuality] = React.useState<any>(null)
   const [weather, setWeather] = React.useState<any>(null)
   const [heatmap, setHeatmap] = React.useState<any[]>([])
   const [loading, setLoading] = React.useState(true)
 
-  // Fetch Logic Integration
   React.useEffect(() => {
     const fetchData = async () => {
       try {
@@ -99,21 +106,16 @@ export default function EnvironmentPage() {
           condition: conditionMap[weatherData.weather[0].main] || "cloudy",
           humidity: weatherData.main.humidity,
           wind: Math.round(weatherData.wind.speed * 3.6),
-          uvIndex: 5, // OpenWeather requires a separate call for UV, defaulting to 5
+          uvIndex: 5,
         })
 
-        // 3. Heatmap Mock (As per requirements)
-        const grid = []
-        for (let i = 0; i < 8; i++) {
-          const row = []
-          for (let j = 0; j < 8; j++) {
-            row.push({
-              value: Math.floor(Math.random() * 100),
-              area: `Zone ${String.fromCharCode(65 + i)}${j + 1}`,
-            })
-          }
-          grid.push(row)
-        }
+        // 3. Heatmap Logic with Area Labels
+        const grid = MUMBAI_AREAS.map((row) => 
+          row.map((areaName) => ({
+            value: Math.floor(Math.random() * 100),
+            area: areaName,
+          }))
+        )
         setHeatmap(grid)
 
       } catch (err) {
@@ -257,7 +259,6 @@ export default function EnvironmentPage() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* AQI Trend Chart */}
         <GlassCard className={cn(emergencyMode && "border-emergency/30")}>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <Wind className="w-4 h-4" />
@@ -273,39 +274,15 @@ export default function EnvironmentPage() {
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" opacity={0.3} />
-                <XAxis
-                  dataKey="hour"
-                  stroke="var(--muted-foreground)"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <YAxis
-                  stroke="var(--muted-foreground)"
-                  fontSize={12}
-                  tickLine={false}
-                  axisLine={false}
-                />
-                <Tooltip
-                  contentStyle={{
-                    background: "var(--popover)",
-                    border: "1px solid var(--border)",
-                    borderRadius: "8px",
-                  }}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="aqi"
-                  stroke="var(--chart-2)"
-                  fill="url(#aqiGradient)"
-                  strokeWidth={2}
-                />
+                <XAxis dataKey="hour" stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                <YAxis stroke="var(--muted-foreground)" fontSize={12} tickLine={false} axisLine={false} />
+                <Tooltip contentStyle={{ background: "var(--popover)", border: "1px solid var(--border)", borderRadius: "8px" }} />
+                <Area type="monotone" dataKey="aqi" stroke="var(--chart-2)" fill="url(#aqiGradient)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
           </div>
         </GlassCard>
 
-        {/* Pollutant Levels */}
         <GlassCard className={cn(emergencyMode && "border-emergency/30")}>
           <h3 className="font-semibold mb-4 flex items-center gap-2">
             <Eye className="w-4 h-4" />
@@ -341,39 +318,40 @@ export default function EnvironmentPage() {
         </GlassCard>
       </div>
 
-      {/* Bottom Row */}
+      {/* Heatmap Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <GlassCard className={cn("lg:col-span-2", emergencyMode && "border-emergency/30")}>
-          <h3 className="font-semibold mb-4 flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4" />
-            Pollution Heatmap
-          </h3>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="font-semibold flex items-center gap-2">
+              <MapPin className="w-4 h-4" />
+              Mumbai Pollution Heatmap
+            </h3>
+            <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold">Live Grid</span>
+          </div>
+          
           <div className="grid grid-cols-8 gap-1">
             {heatmap.flat().map((cell, i) => (
               <div
                 key={i}
                 className={cn(
-                  "aspect-square rounded transition-all duration-200 hover:scale-110 cursor-pointer",
+                  "aspect-square rounded transition-all duration-200 hover:scale-110 cursor-pointer flex items-center justify-center overflow-hidden p-0.5",
                   getHeatmapColor(cell.value),
-                  "opacity-70 hover:opacity-100"
+                  "opacity-80 hover:opacity-100 shadow-sm"
                 )}
                 title={`${cell.area}: AQI ${cell.value}`}
-              />
+              >
+                <span className="text-[7px] md:text-[9px] font-bold text-white text-center leading-tight drop-shadow-sm select-none">
+                  {cell.area}
+                </span>
+              </div>
             ))}
           </div>
+          
           <div className="flex items-center justify-center gap-4 mt-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-success" /> Good
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-chart-2" /> Moderate
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-warning" /> Unhealthy
-            </span>
-            <span className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-destructive" /> Hazardous
-            </span>
+            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-success" /> Good</span>
+            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-chart-2" /> Moderate</span>
+            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-warning" /> Unhealthy</span>
+            <span className="flex items-center gap-1"><div className="w-3 h-3 rounded bg-destructive" /> Hazardous</span>
           </div>
         </GlassCard>
 
